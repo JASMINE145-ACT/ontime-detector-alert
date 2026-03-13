@@ -64,7 +64,7 @@ func TestNotifyOpenClaw_SendsExpectedRequest(t *testing.T) {
 	if capturedReq.Method != http.MethodPost {
 		t.Errorf("expected POST method, got %s", capturedReq.Method)
 	}
-	if got := capturedReq.URL.String(); got != "https://agent-team-v3.onrender.com/agent/notify" {
+	if got := capturedReq.URL.String(); got != "https://ontime-detector-alert.onrender.com/agent/notify" {
 		t.Errorf("unexpected URL: %s", got)
 	}
 	if ct := capturedReq.Header.Get("Content-Type"); ct != "application/json" {

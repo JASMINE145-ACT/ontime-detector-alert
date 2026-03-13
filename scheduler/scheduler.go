@@ -125,7 +125,7 @@ func notifyOpenClaw(userID, symbol string, price float64) {
 	}
 
 	resp, err := http.Post(
-		"https://agent-team-v3.onrender.com/agent/notify",
+		"https://ontime-detector-alert.onrender.com/agent/notify",
 		"application/json",
 		bytes.NewBuffer(body),
 	)

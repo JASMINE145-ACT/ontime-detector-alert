@@ -179,10 +179,10 @@ CREATE TABLE IF NOT EXISTS alerts (
      - `Price: {current_price}`
      - `Time: {RFC3339 UTC}`
    - 调 `Notifier.SendText(content)`；
-   - 额外调用一个固定的 OpenClaw 回调：
+   - 额外调用一个固定的 OpenClaw 回调（当前部署在同一 Render 服务域名下）：
 
      ```text
-     POST https://agent-team-v3.onrender.com/agent/notify
+     POST https://ontime-detector-alert.onrender.com/agent/notify
      Content-Type: application/json
 
      {
