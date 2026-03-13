@@ -82,6 +82,16 @@ cd "d:\Projects\agent-jk\Ontime Detector\my version"
 go run ./cmd/server
 ```
 
+启动后，进程会在连接 SQLite 成功后自动为演示用户 `wecom:demo` **预置 5 条布伦特原油告警**（若已存在相同规则则跳过），分别是：
+
+- `BZ=F above 120`
+- `BZ=F above 130`
+- `BZ=F above 150`
+- `BZ=F below 90`
+- `BZ=F below 80`
+
+这些预置告警主要用于你在 Render 上每次重新部署后的快速自测。
+
 健康检查：
 
 ```text
@@ -309,7 +319,10 @@ cd "d:\Projects\agent-jk\Ontime Detector\my version"
 go test ./...
 ```
 
-- 当前没有 `*_test.go`，`go test ./...` 主要用于验证 **编译是否通过、依赖是否完整**。后续可为：
+- 已添加一个针对 `cmd/server/main.go` 中 `seedDefaultAlerts` 的单元风格测试（`cmd/server/main_test.go`），使用内存实现的 `alerts.Repository` 验证：
+  - **首次调用** 会为演示用户 `wecom:demo` 创建 5 条默认布伦特原油告警；
+  - **再次调用** 不会产生重复记录（幂等性保证依赖于 `symbol + direction + threshold` 组合去重）。
+- 后续可进一步为：
   - `engine` 编写纯函数单测；
   - `priceprovider` 写 mock / integration 测试；
   - `api` 写 HTTP handler 级别的单测。

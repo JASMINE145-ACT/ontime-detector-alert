@@ -85,8 +85,14 @@ func (s *Scheduler) tick() error {
 	log.Printf("scheduler tick: %d alerts, %d triggered, prices: %v", len(alertsList), len(triggered), prices)
 	for _, a := range triggered {
 		price := prices[a.Symbol]
-		content := fmt.Sprintf("Symbol: %s\nCondition: %s %.4f\nPrice: %.4f\nTime: %s",
-			a.Symbol, directionText(a.Direction), a.Threshold, price, now.Format(time.RFC3339))
+		content := fmt.Sprintf(
+			"布伦特原油（%s）价格触发“向上 %.0f”告警：当前价格 %.2f，高于设定阈值 %.2f（UTC 时间：%s）。",
+			a.Symbol,
+			a.Threshold,
+			price,
+			a.Threshold,
+			now.Format(time.RFC3339),
+		)
 		if err := s.notifier.SendText(content); err != nil {
 			log.Printf("send notification failed for alert %s: %v", a.ID, err)
 			continue
