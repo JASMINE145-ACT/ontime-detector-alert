@@ -1,0 +1,14 @@
+# Binary (root only; do not ignore cmd/server/)
+/server
+/server.exe
+
+# SQLite
+*.db
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

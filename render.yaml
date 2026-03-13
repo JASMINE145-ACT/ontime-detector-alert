@@ -1,0 +1,8 @@
+# Render Web Service for Ontime Detector Alert Backend
+# See DEPLOY.md for env vars and keep-alive notes.
+services:
+  - type: web
+    name: ontime-detector-alert
+    env: go
+    buildCommand: go build -o server ./cmd/server
+    startCommand: ./server

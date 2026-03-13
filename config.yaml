@@ -1,0 +1,11 @@
+price_provider:
+  base_url: "https://query1.finance.yahoo.com"
+
+scheduler_interval_seconds: 30
+
+wecom_webhook_url: ""
+
+database_path: "alerts.db"
+
+listen_address: ":8080"
+
