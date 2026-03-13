@@ -76,6 +76,7 @@ func (s *Scheduler) tick() error {
 	now := time.Now().UTC()
 
 	triggered := engine.EvaluateAlerts(alertsList, prices, now)
+	log.Printf("scheduler tick: %d alerts, %d triggered, prices: %v", len(alertsList), len(triggered), prices)
 	for _, a := range triggered {
 		price := prices[a.Symbol]
 		content := fmt.Sprintf("Symbol: %s\nCondition: %s %.4f\nPrice: %.4f\nTime: %s",
