@@ -55,6 +55,7 @@ func (s *Scheduler) tick() error {
 		return fmt.Errorf("list alerts: %w", err)
 	}
 	if len(alertsList) == 0 {
+		log.Printf("scheduler tick: 0 alerts, nothing to check")
 		return nil
 	}
 
