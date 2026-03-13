@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"ontime-detector-alert/alerts"
@@ -111,8 +112,8 @@ func directionText(d alerts.Direction) string {
 }
 
 func sendTelegramAlert(msg string) {
-	token := os.Getenv("TELEGRAM_BOT_TOKEN")
-	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	token := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	chatID := strings.TrimSpace(os.Getenv("TELEGRAM_CHAT_ID"))
 	if token == "" || chatID == "" {
 		return
 	}
