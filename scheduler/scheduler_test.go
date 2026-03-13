@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -122,6 +123,108 @@ type fakeNotifier struct {
 func (n *fakeNotifier) SendText(content string) error {
 	n.lastContent = content
 	return nil
+}
+
+func TestSendTelegramAlert_NoEnv_NoHTTPCall(t *testing.T) {
+	origToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	origChatID := os.Getenv("TELEGRAM_CHAT_ID")
+	defer func() {
+		_ = os.Setenv("TELEGRAM_BOT_TOKEN", origToken)
+		_ = os.Setenv("TELEGRAM_CHAT_ID", origChatID)
+	}()
+
+	if err := os.Unsetenv("TELEGRAM_BOT_TOKEN"); err != nil {
+		t.Fatalf("failed to unset TELEGRAM_BOT_TOKEN: %v", err)
+	}
+	if err := os.Unsetenv("TELEGRAM_CHAT_ID"); err != nil {
+		t.Fatalf("failed to unset TELEGRAM_CHAT_ID: %v", err)
+	}
+
+	origClient := http.DefaultClient
+	defer func() { http.DefaultClient = origClient }()
+
+	http.DefaultClient = &http.Client{
+		Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			t.Fatalf("HTTP should not be called when Telegram env vars are missing")
+			return nil, nil
+		}),
+	}
+
+	sendTelegramAlert("test message")
+}
+
+func TestSendTelegramAlert_SendsExpectedRequest(t *testing.T) {
+	const (
+		token  = "dummy-token"
+		chatID = "123456"
+		msg    = "hello from test"
+	)
+
+	origToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	origChatID := os.Getenv("TELEGRAM_CHAT_ID")
+	defer func() {
+		_ = os.Setenv("TELEGRAM_BOT_TOKEN", origToken)
+		_ = os.Setenv("TELEGRAM_CHAT_ID", origChatID)
+	}()
+
+	if err := os.Setenv("TELEGRAM_BOT_TOKEN", token); err != nil {
+		t.Fatalf("failed to set TELEGRAM_BOT_TOKEN: %v", err)
+	}
+	if err := os.Setenv("TELEGRAM_CHAT_ID", chatID); err != nil {
+		t.Fatalf("failed to set TELEGRAM_CHAT_ID: %v", err)
+	}
+
+	origClient := http.DefaultClient
+	defer func() { http.DefaultClient = origClient }()
+
+	var capturedReq *http.Request
+	var capturedBody []byte
+
+	http.DefaultClient = &http.Client{
+		Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			capturedReq = r
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("failed to read request body: %v", err)
+			}
+			capturedBody = body
+
+			return &http.Response{
+				StatusCode: 200,
+				Body:       io.NopCloser(bytes.NewBufferString("OK")),
+				Header:     make(http.Header),
+				Request:    r,
+			}, nil
+		}),
+	}
+
+	sendTelegramAlert(msg)
+
+	if capturedReq == nil {
+		t.Fatalf("expected HTTP request to be sent")
+	}
+	if capturedReq.Method != http.MethodPost {
+		t.Errorf("expected POST method, got %s", capturedReq.Method)
+	}
+	expectedURL := "https://api.telegram.org/bot" + token + "/sendMessage"
+	if got := capturedReq.URL.String(); got != expectedURL {
+		t.Errorf("unexpected URL: %s, want %s", got, expectedURL)
+	}
+	if ct := capturedReq.Header.Get("Content-Type"); ct != "application/json" {
+		t.Errorf("expected Content-Type application/json, got %q", ct)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(capturedBody, &payload); err != nil {
+		t.Fatalf("failed to unmarshal body: %v", err)
+	}
+
+	if got := payload["chat_id"]; got != chatID {
+		t.Errorf("unexpected chat_id: %v, want %s", got, chatID)
+	}
+	if got := payload["text"]; got != msg {
+		t.Errorf("unexpected text: %v, want %s", got, msg)
+	}
 }
 
 func TestSchedulerTick_TriggersAlertAndUpdatesRepo(t *testing.T) {

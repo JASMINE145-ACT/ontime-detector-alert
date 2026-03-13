@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"ontime-detector-alert/alerts"
@@ -90,6 +91,7 @@ func (s *Scheduler) tick() error {
 			continue
 		}
 		notifyOpenClaw(a.UserID, a.Symbol, price)
+		sendTelegramAlert(content)
 		if err := s.repo.UpdateNotificationState(a.ID, &now, &now); err != nil {
 			log.Printf("update notification state failed for alert %s: %v", a.ID, err)
 		}
@@ -105,6 +107,41 @@ func directionText(d alerts.Direction) string {
 		return "<"
 	default:
 		return "?"
+	}
+}
+
+func sendTelegramAlert(msg string) {
+	token := os.Getenv("TELEGRAM_BOT_TOKEN")
+	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	if token == "" || chatID == "" {
+		return
+	}
+
+	payload := map[string]interface{}{
+		"chat_id": chatID,
+		"text":    msg,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("sendTelegramAlert: marshal payload failed: %v", err)
+		return
+	}
+
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+	resp, err := http.Post(
+		url,
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		log.Printf("sendTelegramAlert: http post failed: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Printf("sendTelegramAlert: non-2xx status: %s", resp.Status)
 	}
 }
 

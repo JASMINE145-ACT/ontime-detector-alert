@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS alerts (
      - `Condition: >/< {threshold}`
      - `Price: {current_price}`
      - `Time: {RFC3339 UTC}`
-   - 调 `Notifier.SendText(content)`；
+   - 调 `Notifier.SendText(content)`（企业微信 Webhook）；
    - 额外调用一个固定的 OpenClaw 回调（当前部署在同一 Render 服务域名下）：
 
      ```text
@@ -192,6 +192,24 @@ CREATE TABLE IF NOT EXISTS alerts (
      ```
 
      上层 OpenClaw backend 可在该接口中把 `message` 以「机器人说话」的形式转发到当前会话。
+   - 再调用一次 Telegram Bot API，将同一段 `content` 发送到固定聊天：
+
+     - 通过环境变量配置：
+       - `TELEGRAM_BOT_TOKEN`：Bot 的 token（如 `8379...:xxxx`），**不要写入仓库**。
+       - `TELEGRAM_CHAT_ID`：接收告警的 chat_id（如群聊 ID）。
+     - 代码内部会构造：
+
+       ```text
+       POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage
+       Content-Type: application/json
+
+       {
+         "chat_id": "${TELEGRAM_CHAT_ID}",
+         "text": "Symbol: ...\nCondition: ...\nPrice: ...\nTime: ..."
+       }
+       ```
+
+     若 env 未设置或请求失败，仅记录日志，不影响主流程。
    - 成功后调用 `UpdateNotificationState(id, &now, &now)`。
 
 `Scheduler.Run()` 在 `main` 中以 goroutine 形式启动，与 HTTP API 并行运行，共享同一个 `Repository` 实例。
