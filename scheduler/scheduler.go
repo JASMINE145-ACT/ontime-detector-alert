@@ -1,8 +1,11 @@
 package scheduler
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"ontime-detector-alert/alerts"
@@ -86,6 +89,7 @@ func (s *Scheduler) tick() error {
 			log.Printf("send notification failed for alert %s: %v", a.ID, err)
 			continue
 		}
+		notifyOpenClaw(a.UserID, a.Symbol, price)
 		if err := s.repo.UpdateNotificationState(a.ID, &now, &now); err != nil {
 			log.Printf("update notification state failed for alert %s: %v", a.ID, err)
 		}
@@ -101,6 +105,38 @@ func directionText(d alerts.Direction) string {
 		return "<"
 	default:
 		return "?"
+	}
+}
+
+func notifyOpenClaw(userID, symbol string, price float64) {
+	if userID == "" {
+		return
+	}
+
+	payload := map[string]interface{}{
+		"user_id": userID,
+		"message": fmt.Sprintf("⚠️ Alert Triggered\nSymbol: %s\nPrice: %.4f", symbol, price),
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("notifyOpenClaw: marshal payload failed: %v", err)
+		return
+	}
+
+	resp, err := http.Post(
+		"https://agent-team-v3.onrender.com/agent/notify",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		log.Printf("notifyOpenClaw: http post failed: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Printf("notifyOpenClaw: non-2xx status: %s", resp.Status)
 	}
 }
 

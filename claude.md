@@ -179,6 +179,19 @@ CREATE TABLE IF NOT EXISTS alerts (
      - `Price: {current_price}`
      - `Time: {RFC3339 UTC}`
    - 调 `Notifier.SendText(content)`；
+   - 额外调用一个固定的 OpenClaw 回调：
+
+     ```text
+     POST https://agent-team-v3.onrender.com/agent/notify
+     Content-Type: application/json
+
+     {
+       "user_id": "{alert.UserID}",
+       "message": "⚠️ Alert Triggered\nSymbol: {symbol}\nPrice: {current_price}"
+     }
+     ```
+
+     上层 OpenClaw backend 可在该接口中把 `message` 以「机器人说话」的形式转发到当前会话。
    - 成功后调用 `UpdateNotificationState(id, &now, &now)`。
 
 `Scheduler.Run()` 在 `main` 中以 goroutine 形式启动，与 HTTP API 并行运行，共享同一个 `Repository` 实例。
